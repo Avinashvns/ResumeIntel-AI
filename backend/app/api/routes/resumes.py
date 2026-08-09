@@ -6,7 +6,16 @@ from app.ingestion.storage import (
     generate_stored_filename,
     get_resume_path,
 )
-from app.schemas.resume import ResumeUploadResponse
+
+from app.ingestion.pdf_extractor import (
+    PDFExtractionError,
+    extract_pdf_text,
+)
+from app.schemas.resume import (
+    ResumeExtractionResponse,
+    ResumePage,
+    ResumeUploadResponse,
+)
 
 
 router = APIRouter(
@@ -77,4 +86,39 @@ async def upload_resume(
         file_size=file_size,
         content_type=file.content_type,
         status="uploaded",
+    )
+
+
+@router.get(
+    "/{stored_filename}/text",
+    response_model=ResumeExtractionResponse,
+)
+def extract_resume_text(
+    stored_filename: str,
+) -> ResumeExtractionResponse:
+
+    file_path = get_resume_path(stored_filename)
+
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Resume file not found.",
+        )
+
+    try:
+        pages = extract_pdf_text(file_path)
+
+    except PDFExtractionError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+
+    return ResumeExtractionResponse(
+        stored_filename=stored_filename,
+        page_count=len(pages),
+        pages=[
+            ResumePage(**page)
+            for page in pages
+        ],
     )
