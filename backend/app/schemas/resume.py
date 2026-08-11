@@ -18,3 +18,14 @@ class ResumeExtractionResponse(BaseModel):
     stored_filename: str
     page_count: int
     pages: list[ResumePage]
+
+
+class CleanedResumePage(BaseModel):
+    page_number: int
+    text: str
+
+
+class ResumeCleaningResponse(BaseModel):
+    stored_filename: str
+    page_count: int
+    pages: list[CleanedResumePage]

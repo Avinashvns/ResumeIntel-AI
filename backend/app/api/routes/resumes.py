@@ -12,10 +12,14 @@ from app.ingestion.pdf_extractor import (
     extract_pdf_text,
 )
 from app.schemas.resume import (
+    CleanedResumePage,
     ResumeExtractionResponse,
     ResumePage,
     ResumeUploadResponse,
+    ResumeCleaningResponse,
 )
+
+from app.ingestion.text_cleaner import clean_text
 
 
 router = APIRouter(
@@ -121,4 +125,44 @@ def extract_resume_text(
             ResumePage(**page)
             for page in pages
         ],
+    )
+
+
+@router.get(
+    "/{stored_filename}/clean",
+    response_model=ResumeCleaningResponse,
+)
+def clean_resume_text(
+    stored_filename: str,
+) -> ResumeCleaningResponse:
+
+    file_path = get_resume_path(stored_filename)
+
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Resume file not found.",
+        )
+
+    try:
+        pages = extract_pdf_text(file_path)
+
+    except PDFExtractionError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+
+    cleaned_pages = [
+        CleanedResumePage(
+            page_number=page["page_number"],
+            text=clean_text(page["text"]),
+        )
+        for page in pages
+    ]
+
+    return ResumeCleaningResponse(
+        stored_filename=stored_filename,
+        page_count=len(cleaned_pages),
+        pages=cleaned_pages,
     )
