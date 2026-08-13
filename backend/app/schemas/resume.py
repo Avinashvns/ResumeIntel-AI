@@ -29,3 +29,15 @@ class ResumeCleaningResponse(BaseModel):
     stored_filename: str
     page_count: int
     pages: list[CleanedResumePage]
+
+
+class ResumeChunk(BaseModel):
+    chunk_id: str
+    text: str
+    page_number: int
+
+
+class ResumeChunkingResponse(BaseModel):
+    stored_filename: str
+    chunk_count: int
+    chunks: list[ResumeChunk]

@@ -17,9 +17,12 @@ from app.schemas.resume import (
     ResumePage,
     ResumeUploadResponse,
     ResumeCleaningResponse,
+    ResumeChunk,
+    ResumeChunkingResponse
 )
 
 from app.ingestion.text_cleaner import clean_text
+from app.ingestion.chunker import chunk_text
 
 
 router = APIRouter(
@@ -165,4 +168,58 @@ def clean_resume_text(
         stored_filename=stored_filename,
         page_count=len(cleaned_pages),
         pages=cleaned_pages,
+    )
+
+
+@router.get(
+    "/{stored_filename}/chunks",
+    response_model=ResumeChunkingResponse,
+)
+def chunk_resume(
+    stored_filename: str,
+) -> ResumeChunkingResponse:
+
+    file_path = get_resume_path(stored_filename)
+
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Resume file not found.",
+        )
+
+    try:
+        pages = extract_pdf_text(file_path)
+
+    except PDFExtractionError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+
+    chunks: list[ResumeChunk] = []
+
+    for page in pages:
+        cleaned_text = clean_text(page["text"])
+
+        page_chunks = chunk_text(cleaned_text)
+
+        for index, text_chunk in enumerate(
+            page_chunks,
+            start=1,
+        ):
+            chunks.append(
+                ResumeChunk(
+                    chunk_id=(
+                        f"page-{page['page_number']}"
+                        f"-chunk-{index}"
+                    ),
+                    text=text_chunk,
+                    page_number=page["page_number"],
+                )
+            )
+
+    return ResumeChunkingResponse(
+        stored_filename=stored_filename,
+        chunk_count=len(chunks),
+        chunks=chunks,
     )
