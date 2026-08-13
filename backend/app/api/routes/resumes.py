@@ -18,11 +18,17 @@ from app.schemas.resume import (
     ResumeUploadResponse,
     ResumeCleaningResponse,
     ResumeChunk,
-    ResumeChunkingResponse
+    ResumeChunkingResponse,
+    ResumeDocument,
+    ResumeDocumentResponse,
 )
 
 from app.ingestion.text_cleaner import clean_text
 from app.ingestion.chunker import chunk_text
+
+from app.ingestion.document_builder import (
+    build_resume_document,
+)
 
 
 router = APIRouter(
@@ -222,4 +228,76 @@ def chunk_resume(
         stored_filename=stored_filename,
         chunk_count=len(chunks),
         chunks=chunks,
+    )
+
+
+@router.get(
+    "/{stored_filename}/documents",
+    response_model=ResumeDocumentResponse,
+)
+def build_resume_documents(
+    stored_filename: str,
+) -> ResumeDocumentResponse:
+
+    file_path = get_resume_path(stored_filename)
+
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Resume file not found.",
+        )
+
+    try:
+        pages = extract_pdf_text(file_path)
+
+    except PDFExtractionError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+
+    document_id = Path(
+        stored_filename
+    ).stem
+
+    documents: list[ResumeDocument] = []
+
+    for page in pages:
+        cleaned_text = clean_text(
+            page["text"]
+        )
+
+        chunks = chunk_text(
+            cleaned_text
+        )
+
+        for index, text_chunk in enumerate(
+            chunks,
+            start=1,
+        ):
+            chunk_id = (
+                f"page-{page['page_number']}"
+                f"-chunk-{index}"
+            )
+
+            document = build_resume_document(
+                text=text_chunk,
+                document_id=document_id,
+                filename=stored_filename,
+                page_number=page["page_number"],
+                chunk_id=chunk_id,
+            )
+
+            documents.append(
+                ResumeDocument(
+                    chunk_id=chunk_id,
+                    text=document.page_content,
+                    metadata=document.metadata,
+                )
+            )
+
+    return ResumeDocumentResponse(
+        stored_filename=stored_filename,
+        document_count=len(documents),
+        documents=documents,
     )

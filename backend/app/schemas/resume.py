@@ -41,3 +41,15 @@ class ResumeChunkingResponse(BaseModel):
     stored_filename: str
     chunk_count: int
     chunks: list[ResumeChunk]
+
+
+class ResumeDocument(BaseModel):
+    chunk_id: str
+    text: str
+    metadata: dict
+
+
+class ResumeDocumentResponse(BaseModel):
+    stored_filename: str
+    document_count: int
+    documents: list[ResumeDocument]

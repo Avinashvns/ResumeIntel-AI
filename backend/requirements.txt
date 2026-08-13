@@ -5,4 +5,7 @@ pydantic-settings
 python-dotenv
 python-multipart
 pymupdf
+
+
 langchain-text-splitters
+langchain-core
