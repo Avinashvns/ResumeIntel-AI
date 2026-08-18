@@ -53,3 +53,10 @@ class ResumeDocumentResponse(BaseModel):
     stored_filename: str
     document_count: int
     documents: list[ResumeDocument]
+
+class ResumeIndexResponse(BaseModel):
+    stored_filename: str
+    document_id: str
+    document_count: int
+    index_path: str
+    status: str

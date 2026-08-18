@@ -21,6 +21,7 @@ from app.schemas.resume import (
     ResumeChunkingResponse,
     ResumeDocument,
     ResumeDocumentResponse,
+    ResumeIndexResponse,
 )
 
 from app.ingestion.text_cleaner import clean_text
@@ -28,6 +29,10 @@ from app.ingestion.chunker import chunk_text
 
 from app.ingestion.document_builder import (
     build_resume_document,
+)
+
+from app.indexing.resume_indexer import (
+    index_resume,
 )
 
 
@@ -300,4 +305,55 @@ def build_resume_documents(
         stored_filename=stored_filename,
         document_count=len(documents),
         documents=documents,
+    )
+
+
+
+@router.post(
+    "/{stored_filename}/index",
+    response_model=ResumeIndexResponse,
+)
+def index_resume_document(
+    stored_filename: str,
+) -> ResumeIndexResponse:
+
+    file_path = get_resume_path(
+        stored_filename
+    )
+
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Resume file not found.",
+        )
+
+    document_id = Path(
+        stored_filename
+    ).stem
+
+    try:
+        document_count, index_path = index_resume(
+            file_path=file_path,
+            document_id=document_id,
+            filename=stored_filename,
+        )
+
+    except PDFExtractionError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+
+    return ResumeIndexResponse(
+        stored_filename=stored_filename,
+        document_id=document_id,
+        document_count=document_count,
+        index_path=str(index_path),
+        status="indexed",
     )
