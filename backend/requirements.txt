@@ -9,3 +9,5 @@ pymupdf
 
 langchain-text-splitters
 langchain-core
+
+sentence-transformers
