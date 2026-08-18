@@ -78,5 +78,5 @@ def load_faiss_store(
     return FAISS.load_local(
         str(index_directory),
         embedding_model,
-        allow_dangerous_deserialization=False,
+        allow_dangerous_deserialization=True,
     )

@@ -11,6 +11,11 @@ from app.ingestion.pdf_extractor import (
     PDFExtractionError,
     extract_pdf_text,
 )
+
+from app.retrieval.retriever import (
+    retrieve_resume_documents,
+)
+
 from app.schemas.resume import (
     CleanedResumePage,
     ResumeExtractionResponse,
@@ -21,7 +26,8 @@ from app.schemas.resume import (
     ResumeChunkingResponse,
     ResumeDocument,
     ResumeDocumentResponse,
-    ResumeIndexResponse,
+    ResumeRetrievalResponse,
+    ResumeRetrievalResult,
 )
 
 from app.ingestion.text_cleaner import clean_text
@@ -310,21 +316,19 @@ def build_resume_documents(
 
 
 @router.post(
-    "/{stored_filename}/index",
-    response_model=ResumeIndexResponse,
+    "/{stored_filename}/search",
+    response_model=ResumeRetrievalResponse,
 )
-def index_resume_document(
+def search_resume(
     stored_filename: str,
-) -> ResumeIndexResponse:
+    query: str,
+    k: int = 4,
+) -> ResumeRetrievalResponse:
 
-    file_path = get_resume_path(
-        stored_filename
-    )
-
-    if not file_path.exists():
+    if not query.strip():
         raise HTTPException(
-            status_code=404,
-            detail="Resume file not found.",
+            status_code=400,
+            detail="Query cannot be empty.",
         )
 
     document_id = Path(
@@ -332,28 +336,34 @@ def index_resume_document(
     ).stem
 
     try:
-        document_count, index_path = index_resume(
-            file_path=file_path,
+        documents = retrieve_resume_documents(
             document_id=document_id,
-            filename=stored_filename,
+            query=query,
+            k=k,
         )
 
-    except PDFExtractionError as exc:
+    except FileNotFoundError as exc:
         raise HTTPException(
-            status_code=422,
+            status_code=404,
             detail=str(exc),
         ) from exc
 
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=422,
-            detail=str(exc),
-        ) from exc
+    results = [
+        ResumeRetrievalResult(
+            chunk_id=document.metadata.get(
+                "chunk_id",
+                "",
+            ),
+            text=document.page_content,
+            metadata=document.metadata,
+        )
+        for document in documents
+    ]
 
-    return ResumeIndexResponse(
-        stored_filename=stored_filename,
+    return ResumeRetrievalResponse(
         document_id=document_id,
-        document_count=document_count,
-        index_path=str(index_path),
-        status="indexed",
+        query=query,
+        result_count=len(results),
+        results=results,
     )
+

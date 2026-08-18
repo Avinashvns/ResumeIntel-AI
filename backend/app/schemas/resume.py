@@ -60,3 +60,16 @@ class ResumeIndexResponse(BaseModel):
     document_count: int
     index_path: str
     status: str
+
+
+class ResumeRetrievalResult(BaseModel):
+    chunk_id: str
+    text: str
+    metadata: dict
+
+
+class ResumeRetrievalResponse(BaseModel):
+    document_id: str
+    query: str
+    result_count: int
+    results: list[ResumeRetrievalResult]
