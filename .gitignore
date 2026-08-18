@@ -25,6 +25,9 @@ data/jobs/*
 .DS_Store
 Thumbs.db
 
+# Vector stores
+data/vectorstore/*
+
 # Next.js
 frontend/node_modules/
 frontend/.next/
