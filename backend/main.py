@@ -8,6 +8,8 @@ from app.api.routes.resumes import router as resumes_router
 from app.exceptions.handlers import generic_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.routes.rag import router as rag_router
+
 
 settings = get_settings()
 
@@ -35,3 +37,7 @@ app.add_exception_handler(
 
 app.include_router(health_router)
 app.include_router(resumes_router)
+app.include_router(
+    rag_router,
+    prefix="/api/v1",
+)
