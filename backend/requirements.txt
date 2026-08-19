@@ -16,3 +16,5 @@ faiss-cpu
 
 langchain-huggingface
 pytest
+
+langchain-ollama
