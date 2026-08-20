@@ -1,3 +1,4 @@
+from app.llm.ollama_client import get_llm
 from app.rag.context import (
     format_documents_as_context,
 )
@@ -45,3 +46,33 @@ def build_rag_prompt(
     )
 
     return prompt, documents
+
+
+def generate_grounded_answer(
+    document_id: str,
+    query: str,
+    k: int = 4,
+) -> tuple[str, list]:
+    """
+    Retrieve relevant resume context and generate
+    a grounded answer using the configured LLM.
+    """
+
+    prompt, documents = build_rag_prompt(
+        document_id=document_id,
+        query=query,
+        k=k,
+    )
+
+    llm = get_llm()
+
+    response = llm.invoke(prompt)
+
+    answer = response.content.strip()
+
+    if not answer:
+        raise ValueError(
+            "LLM returned an empty answer."
+        )
+
+    return answer, documents
