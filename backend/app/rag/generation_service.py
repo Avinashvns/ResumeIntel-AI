@@ -1,21 +1,19 @@
 from app.llm.ollama_client import get_llm
-from app.rag.context import (
-    format_documents_as_context,
-)
-from app.rag.prompts import RAG_PROMPT
-from app.retrieval.retriever import (
-    retrieve_resume_documents,
+
+from app.rag.prompts import (
+    RAG_PROMPT,
 )
 
 
 def build_rag_prompt(
-    document_id: str,
     query: str,
-    k: int = 4,
+    retrieved_context: str,
 ):
     """
-    Retrieve relevant resume documents and inject
-    them into the RAG prompt.
+    Build the RAG prompt using already retrieved
+    resume context.
+
+    Retrieval is intentionally not performed here.
     """
 
     if not query.strip():
@@ -23,50 +21,40 @@ def build_rag_prompt(
             "Query cannot be empty."
         )
 
-    if k < 1:
+    if not retrieved_context.strip():
         raise ValueError(
-            "k must be greater than 0."
+            "Retrieved context cannot be empty."
         )
-
-    documents = retrieve_resume_documents(
-        document_id=document_id,
-        query=query,
-        k=k,
-    )
-
-    context = format_documents_as_context(
-        documents
-    )
 
     prompt = RAG_PROMPT.invoke(
         {
-            "context": context,
+            "context": retrieved_context,
             "question": query,
         }
     )
 
-    return prompt, documents
+    return prompt
 
 
 def generate_grounded_answer(
-    document_id: str,
     query: str,
-    k: int = 4,
-) -> tuple[str, list]:
+    retrieved_context: str,
+) -> str:
     """
-    Retrieve relevant resume context and generate
-    a grounded answer using the configured LLM.
+    Generate a grounded answer using the
+    already retrieved resume context.
     """
 
-    prompt, documents = build_rag_prompt(
-        document_id=document_id,
+    prompt = build_rag_prompt(
         query=query,
-        k=k,
+        retrieved_context=retrieved_context,
     )
 
     llm = get_llm()
 
-    response = llm.invoke(prompt)
+    response = llm.invoke(
+        prompt
+    )
 
     answer = response.content.strip()
 
@@ -75,4 +63,4 @@ def generate_grounded_answer(
             "LLM returned an empty answer."
         )
 
-    return answer, documents
+    return answer

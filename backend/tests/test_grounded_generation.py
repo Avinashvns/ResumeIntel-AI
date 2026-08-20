@@ -1,63 +1,117 @@
 from app.rag.generation_service import (
+    build_rag_prompt,
     generate_grounded_answer,
 )
 
 
-DOCUMENT_ID = "2be45ab799dc4d879e7ca430c9650b28"
+RETRIEVED_CONTEXT = """
+[Source 1]
+Chunk ID: page-1-chunk-3
+Page: 1
+Content:
+AI/ML Engineer with experience in building
+and deploying end-to-end machine learning
+applications.
+
+[Source 2]
+Chunk ID: page-1-chunk-4
+Page: 1
+Content:
+TECHNICAL SKILLS:
+Machine Learning, Scikit-learn,
+NumPy, Pandas, Flask, AWS, Docker.
+"""
+
+
+def test_rag_prompt_uses_retrieved_context() -> None:
+
+    query = (
+        "Does the candidate have "
+        "experience with ML?"
+    )
+
+    prompt = build_rag_prompt(
+        query=query,
+        retrieved_context=RETRIEVED_CONTEXT,
+    )
+
+    assert prompt
+
+    prompt_text = str(prompt)
+
+    assert "AI/ML Engineer" in prompt_text
+
+    assert "Machine Learning" in prompt_text
+
+    print("\nRAG Prompt:")
+    print(prompt_text)
 
 
 def test_grounded_answer_generation() -> None:
-    query = "Does the candidate have experience with RAG?"
 
-    answer, documents = generate_grounded_answer(
-        document_id=DOCUMENT_ID,
+    query = (
+        "Does the candidate have "
+        "experience with ML?"
+    )
+
+    answer = generate_grounded_answer(
         query=query,
-        k=4,
+        retrieved_context=RETRIEVED_CONTEXT,
     )
 
     assert answer
-    assert isinstance(answer, str)
 
-    assert documents
+    assert isinstance(
+        answer,
+        str,
+    )
 
     print("\nGenerated answer:")
     print(answer)
 
-    print("\nSources:")
-
-    for document in documents:
-        print(
-            "Chunk:",
-            document.metadata.get("chunk_id"),
-            "| Page:",
-            document.metadata.get("page_number"),
-        )
-
 
 def test_grounded_answer_rejects_empty_query() -> None:
+
     try:
         generate_grounded_answer(
-            document_id=DOCUMENT_ID,
             query="",
-            k=4,
+            retrieved_context=RETRIEVED_CONTEXT,
         )
+
     except ValueError as exc:
-        assert str(exc) == "Query cannot be empty."
+
+        assert str(exc) == (
+            "Query cannot be empty."
+        )
+
     else:
-        raise AssertionError("Expected ValueError for empty query.")
+
+        raise AssertionError(
+            "Expected ValueError for empty query."
+        )
 
 
-def test_grounded_answer_handles_missing_information() -> None:
-    query = "Does the candidate have professional experience flying aircraft?"
+def test_grounded_answer_rejects_empty_context() -> None:
 
-    answer, documents = generate_grounded_answer(
-        document_id=DOCUMENT_ID,
-        query=query,
-        k=4,
+    query = (
+        "Does the candidate have "
+        "experience with ML?"
     )
 
-    assert answer
-    assert documents
+    try:
+        generate_grounded_answer(
+            query=query,
+            retrieved_context="",
+        )
 
-    print("\nMissing-information answer:")
-    print(answer)
+    except ValueError as exc:
+
+        assert str(exc) == (
+            "Retrieved context cannot be empty."
+        )
+
+    else:
+
+        raise AssertionError(
+            "Expected ValueError for empty context."
+        )

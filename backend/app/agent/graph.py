@@ -67,29 +67,67 @@ def generate_answer(
     state: ResumeAgentState,
 ) -> ResumeAgentState:
     """
-    Generate the final grounded answer.
+    Generate the final grounded answer using
+    the context already retrieved through MCP.
     """
 
-    answer, documents = generate_grounded_answer(
-        document_id=state["document_id"],
+    answer = generate_grounded_answer(
         query=state["query"],
-        k=4,
+        retrieved_context=state["retrieved_context"],
     )
 
-    sources = [
-        {
-            "chunk_id": document.metadata.get(
-                "chunk_id",
-                "",
-            ),
-            "page_number": document.metadata.get(
-                "page_number",
-                "unknown",
-            ),
-            "text": document.page_content,
-        }
-        for document in documents
-    ]
+    sources: list[dict] = []
+
+    context = state["retrieved_context"]
+
+    blocks = context.split("[Source ")
+
+    for block in blocks[1:]:
+        lines = block.splitlines()
+
+        if not lines:
+            continue
+
+        source_number = lines[0].rstrip("]")
+
+        chunk_id = ""
+
+        page_number = "unknown"
+
+        content_lines: list[str] = []
+
+        for line in lines[1:]:
+
+            if line.startswith("Chunk ID:"):
+                chunk_id = line.replace(
+                    "Chunk ID:",
+                    "",
+                    1,
+                ).strip()
+
+            elif line.startswith("Page:"):
+                page_number = line.replace(
+                    "Page:",
+                    "",
+                    1,
+                ).strip()
+
+            elif line.startswith("Content:"):
+                continue
+
+            else:
+                content_lines.append(line)
+
+        sources.append(
+            {
+                "source": source_number,
+                "chunk_id": chunk_id,
+                "page_number": page_number,
+                "text": "\n".join(
+                    content_lines
+                ).strip(),
+            }
+        )
 
     return {
         **state,
