@@ -14,6 +14,10 @@ from app.rag.generation_service import (
     generate_grounded_answer,
 )
 
+from langgraph.checkpoint.memory import (
+    MemorySaver,
+)
+
 
 def analyze_request(
     state: ResumeAgentState,
@@ -94,7 +98,8 @@ def generate_answer(
 
 def build_resume_agent():
     """
-    Build the ResumeIntel LangGraph agent.
+    Build the ResumeIntel LangGraph agent
+    with short-term conversation memory.
     """
 
     workflow = StateGraph(
@@ -136,4 +141,8 @@ def build_resume_agent():
         END,
     )
 
-    return workflow.compile()
+    checkpointer = MemorySaver()
+
+    return workflow.compile(
+        checkpointer=checkpointer,
+    )
