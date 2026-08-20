@@ -9,6 +9,7 @@ from app.exceptions.handlers import generic_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.rag import router as rag_router
+from app.api.routes.agent import router as agent_router
 
 
 settings = get_settings()
@@ -39,5 +40,10 @@ app.include_router(health_router)
 app.include_router(resumes_router)
 app.include_router(
     rag_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    agent_router,
     prefix="/api/v1",
 )

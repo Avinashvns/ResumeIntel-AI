@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import fitz
+import pymupdf
 
 
 class PDFExtractionError(Exception):
@@ -21,7 +21,7 @@ def extract_pdf_text(file_path: Path) -> list[dict]:
         )
 
     try:
-        document = fitz.open(file_path)
+        document = pymupdf.open(file_path)
 
         pages = []
 
