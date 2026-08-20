@@ -1,0 +1,68 @@
+from pydantic import BaseModel, Field
+
+
+class SkillMatchResult(BaseModel):
+    """
+    Result of matching resume skills
+    against job description skills.
+    """
+
+    matched_skills: list[str] = Field(
+        default_factory=list,
+    )
+
+
+def normalize_skill(
+    skill: str,
+) -> str:
+    """
+    Normalize a skill for reliable comparison.
+    """
+
+    return " ".join(
+        skill.strip().lower().split()
+    )
+
+
+def match_skills(
+    resume_skills: list[str],
+    job_skills: list[str],
+) -> SkillMatchResult:
+    """
+    Match resume skills against job skills.
+
+    Matching is:
+    - case-insensitive
+    - whitespace-normalized
+    """
+
+    if not resume_skills:
+        return SkillMatchResult()
+
+    if not job_skills:
+        return SkillMatchResult()
+
+    resume_skill_map = {
+        normalize_skill(skill): skill
+        for skill in resume_skills
+        if skill.strip()
+    }
+
+    matched_skills: list[str] = []
+
+    for job_skill in job_skills:
+
+        normalized_job_skill = normalize_skill(
+            job_skill
+        )
+
+        if normalized_job_skill in resume_skill_map:
+            matched_skills.append(
+                resume_skill_map[
+                    normalized_job_skill
+                ]
+            )
+
+    return SkillMatchResult(
+        matched_skills=matched_skills,
+    )
