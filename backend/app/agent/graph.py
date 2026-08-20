@@ -7,9 +7,11 @@ from langgraph.graph import (
 from app.agent.state import (
     ResumeAgentState,
 )
+
 from app.agent.tools import (
     search_resume,
 )
+
 from app.rag.generation_service import (
     generate_grounded_answer,
 )
@@ -39,15 +41,15 @@ def analyze_request(
     }
 
 
-def retrieve_context(
+async def retrieve_context(
     state: ResumeAgentState,
 ) -> ResumeAgentState:
     """
-    Use the resume search tool to retrieve
-    relevant resume information.
+    Use the MCP-backed resume search tool
+    to retrieve relevant resume information.
     """
 
-    result = search_resume.invoke(
+    result = await search_resume.ainvoke(
         {
             "document_id": state["document_id"],
             "query": state["query"],

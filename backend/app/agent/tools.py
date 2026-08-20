@@ -1,21 +1,22 @@
 from langchain_core.tools import tool
 
-from app.retrieval.retriever import (
-    retrieve_resume_documents,
+from app.mcp.service import (
+    search_resume_via_mcp,
 )
 
 
 @tool
-def search_resume(
+async def search_resume(
     document_id: str,
     query: str,
     k: int = 4,
 ) -> str:
     """
-    Search an uploaded resume for information
-    relevant to the user's question.
+    Search an uploaded resume through the
+    ResumeIntel MCP server.
 
-    Use this tool whenever resume evidence is needed.
+    Use this tool whenever resume evidence
+    is needed.
     """
 
     if not document_id.strip():
@@ -33,42 +34,8 @@ def search_resume(
             "k must be greater than 0."
         )
 
-    documents = retrieve_resume_documents(
+    return await search_resume_via_mcp(
         document_id=document_id,
         query=query,
         k=k,
     )
-
-    if not documents:
-        return (
-            "No relevant resume information "
-            "was found."
-        )
-
-    results: list[str] = []
-
-    for index, document in enumerate(
-        documents,
-        start=1,
-    ):
-        chunk_id = document.metadata.get(
-            "chunk_id",
-            f"chunk-{index}",
-        )
-
-        page_number = document.metadata.get(
-            "page_number",
-            "unknown",
-        )
-
-        results.append(
-            (
-                f"[Source {index}]\n"
-                f"Chunk ID: {chunk_id}\n"
-                f"Page: {page_number}\n"
-                f"Content:\n"
-                f"{document.page_content}"
-            )
-        )
-
-    return "\n\n".join(results)
