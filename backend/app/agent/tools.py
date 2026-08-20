@@ -1,3 +1,5 @@
+import asyncio
+
 from langchain_core.tools import tool
 
 from app.mcp.service import (
@@ -6,7 +8,7 @@ from app.mcp.service import (
 
 
 @tool
-async def search_resume(
+def search_resume(
     document_id: str,
     query: str,
     k: int = 4,
@@ -34,8 +36,10 @@ async def search_resume(
             "k must be greater than 0."
         )
 
-    return await search_resume_via_mcp(
-        document_id=document_id,
-        query=query,
-        k=k,
+    return asyncio.run(
+        search_resume_via_mcp(
+            document_id=document_id,
+            query=query,
+            k=k,
+        )
     )

@@ -41,7 +41,7 @@ def analyze_request(
     }
 
 
-async def retrieve_context(
+def retrieve_context(
     state: ResumeAgentState,
 ) -> ResumeAgentState:
     """
@@ -49,7 +49,7 @@ async def retrieve_context(
     to retrieve relevant resume information.
     """
 
-    result = await search_resume.ainvoke(
+    result = search_resume.invoke(
         {
             "document_id": state["document_id"],
             "query": state["query"],
