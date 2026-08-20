@@ -2,7 +2,6 @@ from app.agent.graph import (
     build_resume_agent,
 )
 
-
 DOCUMENT_ID = (
     "2be45ab799dc4d879e7ca430c9650b28"
 )
@@ -81,3 +80,4 @@ def test_resume_analysis_agent_rejects_empty_query() -> None:
         raise AssertionError(
             "Expected ValueError for empty query."
         )
+

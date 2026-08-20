@@ -7,14 +7,11 @@ from langgraph.graph import (
 from app.agent.state import (
     ResumeAgentState,
 )
-from app.rag.context import (
-    format_documents_as_context,
+from app.agent.tools import (
+    search_resume,
 )
 from app.rag.generation_service import (
     generate_grounded_answer,
-)
-from app.retrieval.retriever import (
-    retrieve_resume_documents,
 )
 
 
@@ -42,18 +39,35 @@ def retrieve_context(
     state: ResumeAgentState,
 ) -> ResumeAgentState:
     """
-    Retrieve relevant resume documents using
-    the existing semantic retriever.
+    Use the resume search tool to retrieve
+    relevant resume information.
     """
 
-    documents = retrieve_resume_documents(
+    result = search_resume.invoke(
+        {
+            "document_id": state["document_id"],
+            "query": state["query"],
+            "k": 4,
+        }
+    )
+
+    return {
+        **state,
+        "retrieved_context": result,
+    }
+
+
+def generate_answer(
+    state: ResumeAgentState,
+) -> ResumeAgentState:
+    """
+    Generate the final grounded answer.
+    """
+
+    answer, documents = generate_grounded_answer(
         document_id=state["document_id"],
         query=state["query"],
         k=4,
-    )
-
-    context = format_documents_as_context(
-        documents
     )
 
     sources = [
@@ -73,35 +87,14 @@ def retrieve_context(
 
     return {
         **state,
-        "retrieved_context": context,
-        "sources": sources,
-    }
-
-
-def generate_answer(
-    state: ResumeAgentState,
-) -> ResumeAgentState:
-    """
-    Generate a grounded answer using the existing
-    RAG generation pipeline.
-    """
-
-    answer, _ = generate_grounded_answer(
-        document_id=state["document_id"],
-        query=state["query"],
-        k=4,
-    )
-
-    return {
-        **state,
         "answer": answer,
+        "sources": sources,
     }
 
 
 def build_resume_agent():
     """
-    Build and compile the ResumeIntel
-    LangGraph resume analysis agent.
+    Build the ResumeIntel LangGraph agent.
     """
 
     workflow = StateGraph(
