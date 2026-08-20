@@ -1,3 +1,5 @@
+import re
+
 from pydantic import BaseModel, Field
 
 
@@ -34,6 +36,13 @@ STOP_WORDS = {
 }
 
 
+EXPERIENCE_ALIASES = {
+    "ml": "machine learning",
+    "ai ml": "machine learning",
+    "ai/ml": "machine learning",
+}
+
+
 def normalize_experience(
     experience: str,
 ) -> str:
@@ -41,9 +50,18 @@ def normalize_experience(
     Normalize experience text for comparison.
     """
 
-    return " ".join(
+    normalized = " ".join(
         experience.strip().lower().split()
     )
+
+    for alias, canonical in EXPERIENCE_ALIASES.items():
+        normalized = re.sub(
+            rf"\b{re.escape(alias)}\b",
+            canonical,
+            normalized,
+        )
+
+    return normalized
 
 
 def extract_meaningful_terms(
@@ -65,6 +83,67 @@ def extract_meaningful_terms(
     }
 
 
+def _is_year_requirement(
+    requirement: str,
+) -> bool:
+    """
+    Detect requirements that only express
+    a minimum years-of-experience value.
+    """
+
+    normalized = normalize_experience(
+        requirement
+    )
+
+    return bool(
+        re.fullmatch(
+            r"\d+(?:\.\d+)?\+?",
+            normalized,
+        )
+        or re.fullmatch(
+            r"\d+(?:\.\d+)?\+?\s*years?",
+            normalized,
+        )
+    )
+
+
+def _requirement_is_satisfied(
+    requirement: str,
+    resume_terms: set[str],
+) -> bool:
+    """
+    Determine whether a job experience
+    requirement is supported by the resume.
+    """
+
+    if _is_year_requirement(
+        requirement
+    ):
+        # A pure numeric requirement such as
+        # "0+" does not provide a meaningful
+        # semantic signal for experience matching.
+        return True
+
+    requirement_terms = (
+        extract_meaningful_terms(
+            requirement
+        )
+    )
+
+    if not requirement_terms:
+        return False
+
+    # For multi-word requirements, require
+    # all meaningful terms to be represented.
+    #
+    # Example:
+    # "machine learning"
+    # must match both "machine" and "learning".
+    return requirement_terms.issubset(
+        resume_terms
+    )
+
+
 def match_experience(
     resume_experience: list[str],
     job_experience: list[str],
@@ -73,21 +152,32 @@ def match_experience(
     Match resume experience against
     job experience requirements.
 
-    Matching is based on shared meaningful
-    experience terms while ignoring common
-    stop words.
+    Matching supports:
+    - case-insensitivity
+    - whitespace normalization
+    - ML -> Machine Learning aliasing
+    - semantic term matching
+    - numeric year requirements
     """
 
     if not job_experience:
         return ExperienceMatchResult()
 
+    cleaned_requirements = [
+        item.strip()
+        for item in job_experience
+        if item.strip()
+    ]
+
     if not resume_experience:
+        unmatched = [
+            item
+            for item in cleaned_requirements
+            if not _is_year_requirement(item)
+        ]
+
         return ExperienceMatchResult(
-            unmatched_experience=[
-                item.strip()
-                for item in job_experience
-                if item.strip()
-            ],
+            unmatched_experience=unmatched,
         )
 
     resume_terms: set[str] = set()
@@ -102,25 +192,15 @@ def match_experience(
     matched: list[str] = []
     unmatched: list[str] = []
 
-    for requirement in job_experience:
+    for requirement in cleaned_requirements:
 
-        requirement_terms = (
-            extract_meaningful_terms(
-                requirement
-            )
-        )
-
-        if not requirement_terms:
-            continue
-
-        if requirement_terms & resume_terms:
-            matched.append(
-                requirement.strip()
-            )
+        if _requirement_is_satisfied(
+            requirement=requirement,
+            resume_terms=resume_terms,
+        ):
+            matched.append(requirement)
         else:
-            unmatched.append(
-                requirement.strip()
-            )
+            unmatched.append(requirement)
 
     return ExperienceMatchResult(
         matched_experience=matched,

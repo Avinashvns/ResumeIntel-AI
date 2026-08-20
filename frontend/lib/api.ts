@@ -52,3 +52,67 @@ export async function uploadResume(
 
   return response.json();
 }
+
+
+export interface AnalyzeResponse {
+  stored_filename: string;
+
+  resume_profile: {
+    skills: string[];
+    experience: string[];
+  };
+
+  job_requirements: {
+    skills: string[];
+    experience: string[];
+    education: string[];
+    tools: string[];
+    responsibilities: string[];
+  };
+
+  matched_skills: string[];
+  missing_skills: string[];
+
+  matched_experience: string[];
+  unmatched_experience: string[];
+
+  skill_score: number;
+  experience_score: number;
+  overall_score: number;
+
+  recommendations: string[];
+}
+
+
+export async function analyzeResume(
+  storedFilename: string,
+  jobDescription: string,
+): Promise<AnalyzeResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/analyze`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        stored_filename: storedFilename,
+        job_description: jobDescription,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const error =
+      await response.json().catch(
+        () => null,
+      );
+
+    throw new Error(
+      error?.detail ??
+        "Resume analysis failed.",
+    );
+  }
+
+  return response.json();
+}

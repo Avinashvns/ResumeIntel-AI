@@ -207,3 +207,149 @@ def test_missing_skill_detection_empty_job() -> None:
     )
 
     assert result.missing_skills == []
+
+
+def test_skill_matching_supports_common_aliases() -> None:
+    """
+    Common skill aliases should match their
+    canonical skill names.
+    """
+
+    result = match_skills(
+        resume_skills=[
+            "Machine Learning",
+            "Deep Learning",
+            "Natural Language Processing",
+        ],
+        job_skills=[
+            "ML",
+            "DL",
+            "NLP",
+        ],
+    )
+
+    assert result.matched_skills == [
+        "Machine Learning",
+        "Deep Learning",
+        "Natural Language Processing",
+    ]
+
+
+def test_missing_skill_detection_supports_common_aliases() -> None:
+    """
+    Common skill aliases should not be reported
+    as missing when the canonical skill exists
+    in the resume.
+    """
+
+    result = find_missing_skills(
+        resume_skills=[
+            "Machine Learning",
+            "Deep Learning",
+            "Natural Language Processing",
+        ],
+        job_skills=[
+            "ML",
+            "DL",
+            "NLP",
+            "Python",
+        ],
+    )
+
+    assert result.missing_skills == [
+        "Python",
+    ]
+
+
+def test_skill_matching_deduplicates_alias_requirements() -> None:
+    """
+    ML and Machine Learning should represent
+    one semantic job requirement.
+    """
+
+    result = match_skills(
+        resume_skills=[
+            "Machine Learning",
+        ],
+        job_skills=[
+            "ML",
+            "Machine Learning",
+        ],
+    )
+
+    assert result.matched_skills == [
+        "Machine Learning",
+    ]
+
+
+def test_missing_skill_detection_deduplicates_alias_requirements() -> None:
+    """
+    ML and Machine Learning should not produce
+    duplicate missing requirements.
+    """
+
+    result = find_missing_skills(
+        resume_skills=[],
+        job_skills=[
+            "ML",
+            "Machine Learning",
+        ],
+    )
+
+    assert result.missing_skills == [
+        "ML",
+    ]
+
+
+def test_flutter_resume_does_not_match_unrelated_ml_skills() -> None:
+    """
+    A Flutter-only resume must not receive
+    unrelated ML skill matches.
+    """
+
+    result = match_skills(
+        resume_skills=[
+            "Flutter",
+            "Dart",
+            "Firebase",
+        ],
+        job_skills=[
+            "Python",
+            "PyTorch",
+            "Machine Learning",
+            "FastAPI",
+            "RAG",
+        ],
+    )
+
+    assert result.matched_skills == []
+
+
+def test_flutter_resume_detects_missing_ml_skills() -> None:
+    """
+    A Flutter-only resume should report all
+    unrelated ML requirements as missing.
+    """
+
+    result = find_missing_skills(
+        resume_skills=[
+            "Flutter",
+            "Dart",
+            "Firebase",
+        ],
+        job_skills=[
+            "Python",
+            "PyTorch",
+            "Machine Learning",
+            "FastAPI",
+            "RAG",
+        ],
+    )
+
+    assert result.missing_skills == [
+        "Python",
+        "PyTorch",
+        "Machine Learning",
+        "FastAPI",
+        "RAG",
+    ]

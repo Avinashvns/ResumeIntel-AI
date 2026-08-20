@@ -10,6 +10,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.rag import router as rag_router
 from app.api.routes.agent import router as agent_router
+from app.api.routes.analyze import (
+    router as analyze_router,
+)
 
 
 settings = get_settings()
@@ -45,5 +48,9 @@ app.include_router(
 
 app.include_router(
     agent_router,
+    prefix="/api/v1",
+)
+app.include_router(
+    analyze_router,
     prefix="/api/v1",
 )

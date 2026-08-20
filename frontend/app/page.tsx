@@ -3,7 +3,9 @@
 import { useState } from "react";
 
 import {
+  analyzeResume,
   uploadResume,
+  type AnalyzeResponse,
   type ResumeUploadResponse,
 } from "@/lib/api";
 
@@ -14,19 +16,31 @@ export default function Home() {
   const [resume, setResume] =
     useState<File | null>(null);
 
+  const [storedFilename, setStoredFilename] =
+    useState("");
+
   const [uploading, setUploading] =
     useState(false);
 
   const [uploadResult, setUploadResult] =
     useState<ResumeUploadResponse | null>(
-      null
+      null,
     );
+
+  const [jobDescription, setJobDescription] =
+    useState("");
+
+  const [analyzing, setAnalyzing] =
+    useState(false);
+
+  const [analysisResult, setAnalysisResult] =
+    useState<AnalyzeResponse | null>(null);
 
   const [error, setError] =
     useState("");
 
   const validateFile = (
-    file: File
+    file: File,
   ): string | null => {
     if (
       file.type !== "application/pdf"
@@ -50,10 +64,12 @@ export default function Home() {
   };
 
   const handleFile = (
-    file: File
+    file: File,
   ) => {
     setError("");
     setUploadResult(null);
+    setStoredFilename("");
+    setAnalysisResult(null);
 
     const validationError =
       validateFile(file);
@@ -75,26 +91,82 @@ export default function Home() {
     setUploading(true);
     setError("");
     setUploadResult(null);
+    setStoredFilename("");
+    setAnalysisResult(null);
 
     try {
       const result =
         await uploadResume(resume);
 
       setUploadResult(result);
+
+      setStoredFilename(
+        result.stored_filename,
+      );
     } catch (error) {
       setError(
         error instanceof Error
           ? error.message
-          : "Resume upload failed."
+          : "Resume upload failed.",
       );
     } finally {
       setUploading(false);
     }
   };
 
+  const handleAnalyze = async () => {
+    setError("");
+    setAnalysisResult(null);
+
+    if (!storedFilename) {
+      setError(
+        "Please upload your resume first.",
+      );
+
+      return;
+    }
+
+    if (!jobDescription.trim()) {
+      setError(
+        "Please enter a job description.",
+      );
+
+      return;
+    }
+
+    setAnalyzing(true);
+
+    try {
+      const result =
+        await analyzeResume(
+          storedFilename,
+          jobDescription.trim(),
+        );
+
+      setAnalysisResult(result);
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Resume analysis failed.",
+      );
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const canAnalyze =
+    Boolean(storedFilename) &&
+    Boolean(jobDescription.trim()) &&
+    !uploading &&
+    !analyzing;
+
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
       <div className="mx-auto max-w-6xl">
+
+        {/* Header */}
+
         <header className="mb-12 text-center">
           <p className="text-sm font-semibold uppercase tracking-widest text-cyan-400">
             AI-Powered Career Intelligence
@@ -111,8 +183,12 @@ export default function Home() {
           </p>
         </header>
 
+        {/* Resume + JD */}
+
         <section className="grid gap-6 md:grid-cols-2">
+
           {/* Resume Upload */}
+
           <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
             <h2 className="text-xl font-semibold">
               Upload Resume
@@ -143,7 +219,10 @@ export default function Home() {
                 type="file"
                 accept=".pdf,application/pdf"
                 className="hidden"
-                disabled={uploading}
+                disabled={
+                  uploading ||
+                  analyzing
+                }
                 onChange={(event) => {
                   const file =
                     event.target.files?.[0];
@@ -179,7 +258,9 @@ export default function Home() {
             <button
               type="button"
               disabled={
-                !resume || uploading
+                !resume ||
+                uploading ||
+                analyzing
               }
               onClick={handleUpload}
               className="mt-6 w-full rounded-xl bg-cyan-500 px-6 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
@@ -199,23 +280,16 @@ export default function Home() {
                   {uploadResult.filename}
                 </p>
 
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 break-all text-xs text-slate-500">
                   Document ID:{" "}
                   {uploadResult.stored_filename}
-                </p>
-              </div>
-            )}
-
-            {error && (
-              <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4">
-                <p className="text-sm text-red-400">
-                  {error}
                 </p>
               </div>
             )}
           </div>
 
           {/* Job Description */}
+
           <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
             <h2 className="text-xl font-semibold">
               Job Description
@@ -227,27 +301,149 @@ export default function Home() {
             </p>
 
             <textarea
-              disabled
-              placeholder="Job Description UI will be implemented in Feature 38..."
-              className="mt-6 min-h-48 w-full resize-none rounded-lg border border-slate-700 bg-slate-950 p-3 text-sm outline-none placeholder:text-slate-600"
+              value={jobDescription}
+              onChange={(event) => {
+                setJobDescription(
+                  event.target.value,
+                );
+
+                setError("");
+                setAnalysisResult(null);
+              }}
+              placeholder="Paste job description here..."
+              disabled={
+                uploading ||
+                analyzing
+              }
+              className="mt-6 min-h-48 w-full resize-none rounded-lg border border-slate-700 bg-slate-950 p-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
             />
+
+            <div className="mt-2 flex items-center justify-between">
+              <p className="text-xs text-slate-500">
+                {jobDescription.length}{" "}
+                characters
+              </p>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setJobDescription("");
+                  setAnalysisResult(null);
+                  setError("");
+                }}
+                disabled={
+                  !jobDescription ||
+                  analyzing
+                }
+                className="text-xs text-slate-500 transition hover:text-slate-300 disabled:cursor-not-allowed disabled:opacity-30"
+              >
+                Clear
+              </button>
+            </div>
           </div>
         </section>
+
+        {/* Analyze */}
 
         <div className="mt-8 text-center">
           <button
             type="button"
-            disabled
-            className="cursor-not-allowed rounded-lg bg-slate-700 px-8 py-3 font-semibold text-slate-500"
+            disabled={!canAnalyze}
+            onClick={handleAnalyze}
+            className="rounded-lg bg-cyan-500 px-8 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500"
           >
-            Analyze Resume
+            {analyzing
+              ? "Analyzing..."
+              : "Analyze Resume"}
           </button>
 
           <p className="mt-2 text-xs text-slate-600">
-            Analyze workflow will be connected
-            in a later feature.
+            Upload a resume and enter a job
+            description to start analysis.
           </p>
         </div>
+
+        {/* Error */}
+
+        {error && (
+          <div className="mx-auto mt-6 max-w-2xl rounded-xl border border-red-500/30 bg-red-500/10 p-4">
+            <p className="text-center text-sm text-red-400">
+              {error}
+            </p>
+          </div>
+        )}
+
+        {/* Temporary Feature 39 Result */}
+
+        {analysisResult && (
+          <section className="mx-auto mt-10 max-w-4xl rounded-2xl border border-slate-800 bg-slate-900 p-6">
+            <h2 className="text-xl font-semibold">
+              Analysis Complete
+            </h2>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-3">
+              <div className="rounded-xl bg-slate-950 p-4 text-center">
+                <p className="text-xs text-slate-500">
+                  Overall Match
+                </p>
+
+                <p className="mt-2 text-3xl font-bold text-cyan-400">
+                  {analysisResult.overall_score}%
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-950 p-4 text-center">
+                <p className="text-xs text-slate-500">
+                  Skill Match
+                </p>
+
+                <p className="mt-2 text-3xl font-bold text-emerald-400">
+                  {analysisResult.skill_score}%
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-950 p-4 text-center">
+                <p className="text-xs text-slate-500">
+                  Experience Match
+                </p>
+
+                <p className="mt-2 text-3xl font-bold text-purple-400">
+                  {analysisResult.experience_score}%
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <p className="text-sm font-semibold">
+                Matched Skills
+              </p>
+
+              <p className="mt-2 text-sm text-slate-400">
+                {analysisResult.matched_skills
+                  .length > 0
+                  ? analysisResult.matched_skills.join(
+                      ", ",
+                    )
+                  : "None"}
+              </p>
+            </div>
+
+            <div className="mt-6">
+              <p className="text-sm font-semibold">
+                Missing Skills
+              </p>
+
+              <p className="mt-2 text-sm text-slate-400">
+                {analysisResult.missing_skills
+                  .length > 0
+                  ? analysisResult.missing_skills.join(
+                      ", ",
+                    )
+                  : "None"}
+              </p>
+            </div>
+          </section>
+        )}
       </div>
     </main>
   );

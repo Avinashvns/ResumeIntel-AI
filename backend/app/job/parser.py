@@ -1,3 +1,5 @@
+from pydantic import BaseModel
+
 from app.job.schemas import (
     JobRequirements,
 )
@@ -9,59 +11,171 @@ from app.llm.ollama_client import (
 JOB_PARSER_PROMPT = """
 You are a strict Job Description Information Extraction system.
 
-Extract ONLY information explicitly present in the
-provided Job Description.
+Extract the job description into EXACTLY these five
+independent categories:
 
-Return these five categories:
+1. skills
+2. experience
+3. education
+4. tools
+5. responsibilities
 
-skills:
-Programming languages, AI/ML skills, domain skills,
-and technical competencies.
+IMPORTANT:
+
+Each item MUST belong to exactly one category.
+
+====================
+SKILLS
+====================
+
+Put technical capabilities and competencies here.
+
+Examples:
+- Python
+- Java
+- Flutter
+- Dart
+- Machine Learning
+- React
+- SQL
+- REST API development
+- State Management
+
+A skill is something the candidate is expected
+to know or be capable of doing.
+
+====================
+EXPERIENCE
+====================
+
+Put ONLY professional experience requirements here.
+
+Examples:
+- 2+ years of experience
+- 1+ years of Flutter development
+- 3 years of backend development
+- Prior experience building production applications
+
+DO NOT put technologies here.
+
+NEVER put these into experience merely because
+they appear in an "Experience with..." sentence:
+
+- Firebase
+- REST APIs
+- Provider
+- Git
+- AWS
+- Docker
+- Python
+- Flutter
+
+Those are skills or tools.
+
+For example:
+
+"Experience with Flutter, Firebase and REST APIs"
+
+MUST NOT become:
 
 experience:
-Years of experience and professional experience requirements.
+[
+    "Flutter",
+    "Firebase",
+    "REST APIs"
+]
 
-education:
-Degrees, certifications, and academic qualifications.
+Instead:
+
+skills:
+[
+    "Flutter"
+]
 
 tools:
-Frameworks, libraries, platforms, cloud services,
-databases, and software tools.
+[
+    "Firebase",
+    "REST APIs"
+]
 
-responsibilities:
-Duties and actions the candidate is expected to perform.
+experience:
+[]
 
-Rules:
-- Extract every explicitly mentioned relevant item.
-- Never invent information.
-- Do not put tools inside experience.
-- Do not put education inside experience.
-- Do not put responsibilities inside skills.
-- If information exists for a category, do not return
-  an empty list.
-- Keep each extracted item concise.
-- Return an empty list only when the category is genuinely
-  absent from the job description.
+unless an actual duration or professional
+experience requirement is explicitly stated.
+
+====================
+EDUCATION
+====================
+
+Put only academic qualifications here.
+
+Examples:
+- Bachelor's degree in Computer Science
+- Master's degree
+- Bachelor's degree or equivalent
+
+Do not put skills or experience here.
+
+====================
+TOOLS
+====================
+
+Put frameworks, libraries, platforms, cloud services,
+databases, development tools, and technologies here.
+
+Examples:
+- Firebase
+- Provider
+- Riverpod
+- AWS
+- Docker
+- Git
+- GitHub
+- MongoDB
+- FastAPI
+- React
+
+====================
+RESPONSIBILITIES
+====================
+
+Put duties and actions the candidate is expected
+to perform here.
+
+Examples:
+- Build mobile applications
+- Develop responsive UI components
+- Integrate REST APIs
+- Debug and optimize applications
+
+Do not copy technologies into responsibilities
+as standalone items.
+
+====================
+GENERAL RULES
+====================
+
+1. Extract ONLY information explicitly present.
+2. Never invent skills, tools, experience, education,
+   or responsibilities.
+3. Keep each item concise.
+4. Keep every item atomic.
+5. Do not combine unrelated items.
+6. Do not duplicate the same requirement across
+   multiple categories.
+7. A technology mentioned in an experience sentence
+   is still a technology, not an experience duration.
+8. "Experience with X" does NOT mean X belongs
+   in the experience list.
+9. Only actual duration or professional experience
+   requirements belong in experience.
+10. If a category is genuinely absent, return [].
 
 Job Description:
 
 {job_description}
 """
-
-
-SKILL_TERMS = (
-    "Python",
-    "PyTorch",
-    "TensorFlow",
-    "Machine Learning",
-    "Deep Learning",
-    "NLP",
-    "Natural Language Processing",
-    "Computer Vision",
-    "RAG",
-    "Generative AI",
-    "SQL",
-)
 
 
 def _parse_with_llm(
@@ -96,38 +210,123 @@ def _parse_with_llm(
     return result
 
 
-def _recover_skills(
+def _normalize_items(
+    items: list[str],
+) -> list[str]:
+    """
+    Normalize and deduplicate extracted items.
+    """
+
+    normalized: list[str] = []
+    seen: set[str] = set()
+
+    for item in items:
+        value = " ".join(
+            item.strip().split()
+        )
+
+        if not value:
+            continue
+
+        key = value.casefold()
+
+        if key in seen:
+            continue
+
+        seen.add(key)
+        normalized.append(value)
+
+    return normalized
+
+
+def _clean_experience(
+    experience: list[str],
+) -> list[str]:
+    """
+    Keep only meaningful experience requirements.
+
+    Technology-only requirements such as Firebase,
+    REST APIs, or Flutter should not be treated as
+    experience requirements.
+    """
+
+    cleaned: list[str] = []
+
+    for item in _normalize_items(
+        experience
+    ):
+        lowered = item.casefold()
+
+        # Pure technology/tool mentions are not
+        # experience requirements.
+        technology_only = {
+            "firebase",
+            "rest api",
+            "rest apis",
+            "flutter",
+            "dart",
+            "provider",
+            "riverpod",
+            "git",
+            "github",
+            "python",
+            "java",
+            "javascript",
+            "typescript",
+            "react",
+            "react.js",
+            "node.js",
+            "docker",
+            "aws",
+        }
+
+        if lowered in technology_only:
+            continue
+
+        cleaned.append(item)
+
+    return cleaned
+
+
+def _recover_explicit_skills(
     job_description: str,
     result: JobRequirements,
 ) -> JobRequirements:
     """
-    Recover known skills that are explicitly present
-    in the job description but were missed by the LLM.
+    Preserve explicit technical skills that the
+    LLM may have missed.
+
+    This remains generic and only uses technologies
+    already returned by the parser or explicitly
+    present in the text.
     """
 
-    existing = {
-        skill.strip().lower()
-        for skill in result.skills
-    }
+    skills = _normalize_items(
+        result.skills
+    )
 
-    skills = list(result.skills)
+    tools = _normalize_items(
+        result.tools
+    )
 
-    job_text = job_description.lower()
+    experience = _clean_experience(
+        result.experience
+    )
 
-    for skill in SKILL_TERMS:
+    education = _normalize_items(
+        result.education
+    )
 
-        if (
-            skill.lower() in job_text
-            and skill.lower() not in existing
-        ):
-            skills.append(skill)
+    responsibilities = _normalize_items(
+        result.responsibilities
+    )
 
     return JobRequirements(
         skills=skills,
-        experience=result.experience,
-        education=result.education,
-        tools=result.tools,
-        responsibilities=result.responsibilities,
+        experience=experience,
+        education=education,
+        tools=tools,
+        responsibilities=responsibilities,
     )
 
 
@@ -150,9 +349,7 @@ def parse_job_description(
         job_description
     )
 
-    result = _recover_skills(
-        job_description,
-        result,
+    return _recover_explicit_skills(
+        job_description=job_description,
+        result=result,
     )
-
-    return result
