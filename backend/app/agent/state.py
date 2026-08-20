@@ -6,3 +6,4 @@ class ResumeAgentState(TypedDict):
     query: str
     retrieved_context: str
     answer: str
+    sources: list[dict]

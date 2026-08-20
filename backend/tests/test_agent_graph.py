@@ -8,7 +8,7 @@ DOCUMENT_ID = (
 )
 
 
-def test_resume_agent_graph() -> None:
+def test_resume_analysis_agent() -> None:
 
     agent = build_resume_agent()
 
@@ -17,27 +17,51 @@ def test_resume_agent_graph() -> None:
             "document_id": DOCUMENT_ID,
             "query": (
                 "Does the candidate have "
-                "experience with RAG?"
+                "experience with ML?"
             ),
             "retrieved_context": "",
             "answer": "",
+            "sources": [],
         }
     )
 
-    assert result["document_id"] == DOCUMENT_ID
+    assert (
+        result["document_id"]
+        == DOCUMENT_ID
+    )
 
     assert (
         result["query"]
-        == "Does the candidate have "
-        "experience with RAG?"
+        == (
+            "Does the candidate have "
+            "experience with ML?"
+        )
     )
 
-    assert "retrieved_context" in result
-    assert "answer" in result
+    assert result["retrieved_context"]
+
+    assert result["answer"]
+
+    assert isinstance(
+        result["answer"],
+        str,
+    )
+
+    assert result["sources"]
+
+    print("\nAgent Answer:")
+    print(result["answer"])
+
+    print("\nAgent Sources:")
+
+    for source in result["sources"]:
+        print(
+            f"Page {source['page_number']} "
+            f"| {source['chunk_id']}"
+        )
 
 
-
-def test_resume_agent_rejects_empty_query() -> None:
+def test_resume_analysis_agent_rejects_empty_query() -> None:
 
     agent = build_resume_agent()
 
@@ -48,6 +72,7 @@ def test_resume_agent_rejects_empty_query() -> None:
                 "query": "",
                 "retrieved_context": "",
                 "answer": "",
+                "sources": [],
             }
         )
     except ValueError as exc:
