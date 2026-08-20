@@ -1,9 +1,5 @@
 from mcp.server import MCPServer
 
-from app.retrieval.retriever import (
-    retrieve_resume_documents,
-)
-
 
 mcp = MCPServer(
     "ResumeIntel MCP Server"
@@ -29,10 +25,11 @@ def search_resume(
     """
     Search an uploaded resume for information
     relevant to the user's question.
-
-    Returns relevant resume chunks with their
-    source metadata.
     """
+
+    from app.retrieval.retriever import (
+        retrieve_resume_documents,
+    )
 
     if not document_id.strip():
         raise ValueError(
