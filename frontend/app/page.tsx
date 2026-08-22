@@ -39,6 +39,92 @@ export default function Home() {
   const [error, setError] =
     useState("");
 
+  function ScoreCard({
+    title,
+    score,
+  }: {
+    title: string;
+    score: number;
+  }) {
+    return (
+      <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
+        <p className="text-sm text-slate-400">
+          {title}
+        </p>
+
+        <p className="mt-2 text-3xl font-bold text-white">
+          {score.toFixed(0)}%
+        </p>
+
+        <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-800">
+          <div
+            className="h-full rounded-full bg-cyan-500 transition-all"
+            style={{
+              width: `${Math.min(
+                Math.max(score, 0),
+                100,
+              )}%`,
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+
+  function ResultList({
+    title,
+    items,
+    emptyMessage,
+    variant,
+  }: {
+    title: string;
+    items: string[];
+    emptyMessage: string;
+    variant: "success" | "danger";
+  }) {
+    const icon =
+      variant === "success"
+        ? "✓"
+        : "✗";
+
+    const iconClass =
+      variant === "success"
+        ? "text-emerald-400"
+        : "text-red-400";
+
+    return (
+      <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+        <h3 className="text-lg font-semibold">
+          {title}
+        </h3>
+
+        {items.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-500">
+            {emptyMessage}
+          </p>
+        ) : (
+          <ul className="mt-4 space-y-2">
+            {items.map((item, index) => (
+              <li
+                key={`${item}-${index}`}
+                className="flex items-start gap-3 rounded-lg bg-slate-950 p-3 text-sm text-slate-300"
+              >
+                <span
+                  className={`font-bold ${iconClass}`}
+                >
+                  {icon}
+                </span>
+
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  }
+
   const validateFile = (
     file: File,
   ): string | null => {
@@ -373,77 +459,199 @@ export default function Home() {
           </div>
         )}
 
-        {/* Temporary Feature 39 Result */}
+        {/* Results Dashboard */}
 
         {analysisResult && (
-          <section className="mx-auto mt-10 max-w-4xl rounded-2xl border border-slate-800 bg-slate-900 p-6">
-            <h2 className="text-xl font-semibold">
-              Analysis Complete
-            </h2>
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              <div className="rounded-xl bg-slate-950 p-4 text-center">
-                <p className="text-xs text-slate-500">
-                  Overall Match
-                </p>
-
-                <p className="mt-2 text-3xl font-bold text-cyan-400">
-                  {analysisResult.overall_score}%
-                </p>
-              </div>
-
-              <div className="rounded-xl bg-slate-950 p-4 text-center">
-                <p className="text-xs text-slate-500">
-                  Skill Match
-                </p>
-
-                <p className="mt-2 text-3xl font-bold text-emerald-400">
-                  {analysisResult.skill_score}%
-                </p>
-              </div>
-
-              <div className="rounded-xl bg-slate-950 p-4 text-center">
-                <p className="text-xs text-slate-500">
-                  Experience Match
-                </p>
-
-                <p className="mt-2 text-3xl font-bold text-purple-400">
-                  {analysisResult.experience_score}%
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <p className="text-sm font-semibold">
-                Matched Skills
+          <section className="mt-12">
+            <div className="mb-6">
+              <p className="text-sm font-semibold uppercase tracking-widest text-cyan-400">
+                Analysis Results
               </p>
 
+              <h2 className="mt-2 text-3xl font-bold">
+                Resume Match Dashboard
+              </h2>
+
               <p className="mt-2 text-sm text-slate-400">
-                {analysisResult.matched_skills
-                  .length > 0
-                  ? analysisResult.matched_skills.join(
-                      ", ",
-                    )
-                  : "None"}
+                Analysis generated from your resume and
+                the provided job description.
               </p>
             </div>
 
-            <div className="mt-6">
-              <p className="text-sm font-semibold">
-                Missing Skills
-              </p>
+            {/* Score Cards */}
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <ScoreCard
+                title="Overall Match"
+                score={
+                  analysisResult.overall_score
+                }
+              />
+
+              <ScoreCard
+                title="Skill Match"
+                score={
+                  analysisResult.skill_score
+                }
+              />
+
+              <ScoreCard
+                title="Experience Match"
+                score={
+                  analysisResult.experience_score
+                }
+              />
+            </div>
+
+            {/* Skills */}
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <ResultList
+                title="Matched Skills"
+                items={
+                  analysisResult.matched_skills
+                }
+                emptyMessage="No matching skills found."
+                variant="success"
+              />
+
+              <ResultList
+                title="Missing Skills"
+                items={
+                  analysisResult.missing_skills
+                }
+                emptyMessage="No missing skills detected."
+                variant="danger"
+              />
+            </div>
+
+            {/* Experience */}
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <ResultList
+                title="Matched Experience"
+                items={
+                  analysisResult.matched_experience
+                }
+                emptyMessage="No matched experience requirements."
+                variant="success"
+              />
+
+              <ResultList
+                title="Unmatched Experience"
+                items={
+                  analysisResult.unmatched_experience
+                }
+                emptyMessage="All experience requirements matched."
+                variant="danger"
+              />
+            </div>
+
+            {/* Recommendations */}
+
+            <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-6">
+              <h3 className="text-lg font-semibold">
+                Recommendations
+              </h3>
+
+              {analysisResult.recommendations.length ===
+                0 ? (
+                <p className="mt-4 text-sm text-slate-500">
+                  No recommendations available.
+                </p>
+              ) : (
+                <ul className="mt-4 space-y-3">
+                  {analysisResult.recommendations.map(
+                    (recommendation, index) => (
+                      <li
+                        key={`${recommendation}-${index}`}
+                        className="flex gap-3 rounded-lg bg-slate-950 p-4 text-sm text-slate-300"
+                      >
+                        <span className="font-semibold text-cyan-400">
+                          {index + 1}.
+                        </span>
+
+                        <span>
+                          {recommendation}
+                        </span>
+                      </li>
+                    ),
+                  )}
+                </ul>
+              )}
+            </div>
+
+            {/* Resume Profile */}
+
+            <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-6">
+              <h3 className="text-lg font-semibold">
+                Resume Profile
+              </h3>
 
               <p className="mt-2 text-sm text-slate-400">
-                {analysisResult.missing_skills
-                  .length > 0
-                  ? analysisResult.missing_skills.join(
-                      ", ",
-                    )
-                  : "None"}
+                Extracted skills from your resume.
               </p>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {analysisResult.resume_profile.skills
+                  .length === 0 ? (
+                  <p className="text-sm text-slate-500">
+                    No skills extracted.
+                  </p>
+                ) : (
+                  analysisResult.resume_profile.skills.map(
+                    (skill, index) => (
+                      <span
+                        key={`${skill}-${index}`}
+                        className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1 text-xs text-slate-300"
+                      >
+                        {skill}
+                      </span>
+                    ),
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* Job Requirements */}
+
+            <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-6">
+              <h3 className="text-lg font-semibold">
+                Job Requirements
+              </h3>
+
+              <p className="mt-2 text-sm text-slate-400">
+                Requirements extracted from the job
+                description.
+              </p>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {[
+                  ...analysisResult.job_requirements.skills,
+                  ...analysisResult.job_requirements.tools,
+                ].length === 0 ? (
+                  <p className="text-sm text-slate-500">
+                    No technical requirements extracted.
+                  </p>
+                ) : (
+                  [
+                    ...analysisResult.job_requirements.skills,
+                    ...analysisResult.job_requirements.tools,
+                  ].map((requirement, index) => (
+                    <span
+                      key={`${requirement}-${index}`}
+                      className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1 text-xs text-slate-300"
+                    >
+                      {requirement}
+                    </span>
+                  ))
+                )}
+              </div>
             </div>
           </section>
         )}
+
+
       </div>
     </main>
   );
