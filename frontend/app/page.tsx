@@ -116,7 +116,9 @@ export default function Home() {
                   {icon}
                 </span>
 
-                <span>{item}</span>
+                <span className="min-w-0 break-words">
+                  {item}
+                </span>
               </li>
             ))}
           </ul>
@@ -647,13 +649,13 @@ export default function Home() {
                     (recommendation, index) => (
                       <li
                         key={`${recommendation}-${index}`}
-                        className="flex gap-3 rounded-lg bg-slate-950 p-4 text-sm text-slate-300"
+                        className="flex min-w-0 gap-3 rounded-lg bg-slate-950 p-4 text-sm text-slate-300"
                       >
                         <span className="font-semibold text-cyan-400">
                           {index + 1}.
                         </span>
 
-                        <span>
+                        <span className="min-w-0 break-words">
                           {recommendation}
                         </span>
                       </li>
@@ -685,7 +687,7 @@ export default function Home() {
                     (skill, index) => (
                       <span
                         key={`${skill}-${index}`}
-                        className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1 text-xs text-slate-300"
+                        className="max-w-full break-words rounded-full border border-slate-700 bg-slate-950 px-3 py-1 text-xs text-slate-300"
                       >
                         {skill}
                       </span>
@@ -722,7 +724,7 @@ export default function Home() {
                   ].map((requirement, index) => (
                     <span
                       key={`${requirement}-${index}`}
-                      className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1 text-xs text-slate-300"
+                      className="max-w-full break-words rounded-full border border-slate-700 bg-slate-950 px-3 py-1 text-xs text-slate-300"
                     >
                       {requirement}
                     </span>
