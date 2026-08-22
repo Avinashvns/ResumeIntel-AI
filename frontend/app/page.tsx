@@ -170,7 +170,7 @@ export default function Home() {
   };
 
   const handleUpload = async () => {
-    if (!resume) {
+    if (!resume || uploading || analyzing) {
       return;
     }
 
@@ -190,6 +190,9 @@ export default function Home() {
         result.stored_filename,
       );
     } catch (error) {
+      setUploadResult(null);
+      setStoredFilename("");
+
       setError(
         error instanceof Error
           ? error.message
@@ -201,6 +204,10 @@ export default function Home() {
   };
 
   const handleAnalyze = async () => {
+    if (uploading || analyzing) {
+      return;
+    }
+
     setError("");
     setAnalysisResult(null);
 
@@ -231,6 +238,8 @@ export default function Home() {
 
       setAnalysisResult(result);
     } catch (error) {
+      setAnalysisResult(null);
+
       setError(
         error instanceof Error
           ? error.message
@@ -438,9 +447,17 @@ export default function Home() {
             onClick={handleAnalyze}
             className="rounded-lg bg-cyan-500 px-8 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500"
           >
-            {analyzing
-              ? "Analyzing..."
-              : "Analyze Resume"}
+            {analyzing ? (
+              <span className="inline-flex items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className="h-4 w-4 animate-spin rounded-full border-2 border-slate-950/30 border-t-slate-950"
+                />
+                Analyzing...
+              </span>
+            ) : (
+              "Analyze Resume"
+            )}
           </button>
 
           <p className="mt-2 text-xs text-slate-600">
@@ -452,10 +469,25 @@ export default function Home() {
         {/* Error */}
 
         {error && (
-          <div className="mx-auto mt-6 max-w-2xl rounded-xl border border-red-500/30 bg-red-500/10 p-4">
-            <p className="text-center text-sm text-red-400">
-              {error}
-            </p>
+          <div
+            role="alert"
+            className="mx-auto mt-6 max-w-2xl rounded-xl border border-red-500/30 bg-red-500/10 p-4"
+          >
+            <div className="flex items-start gap-3">
+              <span className="font-bold text-red-400">
+                ✕
+              </span>
+
+              <div>
+                <p className="text-sm font-semibold text-red-400">
+                  Something went wrong
+                </p>
+
+                <p className="mt-1 text-sm text-red-300/80">
+                  {error}
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
