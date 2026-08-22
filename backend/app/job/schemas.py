@@ -62,6 +62,13 @@ class ResumeProfileResponse(BaseModel):
         default_factory=list,
     )
 
+class AnalysisActivity(BaseModel):
+    """
+    Represents one stage of the resume analysis pipeline.
+    """
+
+    stage: str
+    status: str
 
 class AnalyzeResponse(BaseModel):
     """
@@ -106,5 +113,9 @@ class AnalyzeResponse(BaseModel):
     )
 
     recommendations: list[str] = Field(
+        default_factory=list,
+    )
+
+    activity: list[AnalysisActivity] = Field(
         default_factory=list,
     )

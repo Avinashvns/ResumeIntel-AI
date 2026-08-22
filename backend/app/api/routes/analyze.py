@@ -24,6 +24,7 @@ from app.job.scoring import (
     calculate_match_score,
 )
 from app.job.schemas import (
+    AnalysisActivity,
     AnalyzeRequest,
     AnalyzeResponse,
     ResumeProfileResponse,
@@ -48,13 +49,9 @@ def analyze_resume(
     a provided job description.
     """
 
-    stored_filename = (
-        request.stored_filename.strip()
-    )
+    stored_filename = request.stored_filename.strip()
 
-    job_description = (
-        request.job_description.strip()
-    )
+    job_description = request.job_description.strip()
 
     if not stored_filename:
         raise HTTPException(
@@ -69,11 +66,7 @@ def analyze_resume(
         )
 
     try:
-        resume_profile = (
-            extract_resume_profile(
-                stored_filename
-            )
-        )
+        resume_profile = extract_resume_profile(stored_filename)
 
     except FileNotFoundError as exc:
         raise HTTPException(
@@ -88,11 +81,7 @@ def analyze_resume(
         ) from exc
 
     try:
-        job_requirements = (
-            parse_job_description(
-                job_description
-            )
-        )
+        job_requirements = parse_job_description(job_description)
 
     except ValueError as exc:
         raise HTTPException(
@@ -102,11 +91,9 @@ def analyze_resume(
 
     # Combine job skills and tools into one
     # generic matching pool.
-    matchable_job_skills = (
-        merge_job_skills(
-            skills=job_requirements.skills,
-            tools=job_requirements.tools,
-        )
+    matchable_job_skills = merge_job_skills(
+        skills=job_requirements.skills,
+        tools=job_requirements.tools,
     )
 
     skill_match = match_skills(
@@ -114,53 +101,56 @@ def analyze_resume(
         job_skills=matchable_job_skills,
     )
 
-    missing_skill_result = (
-        find_missing_skills(
-            resume_skills=resume_profile.skills,
-            job_skills=matchable_job_skills,
-        )
+    missing_skill_result = find_missing_skills(
+        resume_skills=resume_profile.skills,
+        job_skills=matchable_job_skills,
     )
 
     experience_match = match_experience(
-        resume_experience=(
-            resume_profile.experience
-        ),
-        job_experience=(
-            job_requirements.experience
-        ),
+        resume_experience=(resume_profile.experience),
+        job_experience=(job_requirements.experience),
     )
 
     score = calculate_match_score(
-        total_job_skills=len(
-            matchable_job_skills
-        ),
-        matched_skills=len(
-            skill_match.matched_skills
-        ),
-        total_job_experience=len(
-            job_requirements.experience
-        ),
-        matched_experience=len(
-            experience_match.matched_experience
-        ),
+        total_job_skills=len(matchable_job_skills),
+        matched_skills=len(skill_match.matched_skills),
+        total_job_experience=len(job_requirements.experience),
+        matched_experience=len(experience_match.matched_experience),
     )
 
-    recommendation_result = (
-        generate_recommendations(
-            matched_skills=(
-                skill_match.matched_skills
-            ),
-            missing_skills=(
-                missing_skill_result.missing_skills
-            ),
-            matched_experience=(
-                experience_match.matched_experience
-            ),
-            unmatched_experience=(
-                experience_match.unmatched_experience
-            ),
-        )
+    recommendation_result = generate_recommendations(
+        matched_skills=(skill_match.matched_skills),
+        missing_skills=(missing_skill_result.missing_skills),
+        matched_experience=(experience_match.matched_experience),
+        unmatched_experience=(experience_match.unmatched_experience),
     )
+
+    activity = [
+        AnalysisActivity(
+            stage="Resume Profile Extraction",
+            status="completed",
+        ),
+        AnalysisActivity(
+            stage="Job Description Parsing",
+            status="completed",
+        ),
+        AnalysisActivity(
+            stage="Skill Matching",
+            status="completed",
+        ),
+        AnalysisActivity(
+            stage="Experience Matching",
+            status="completed",
+        ),
+        AnalysisActivity(
+            stage="Match Score Calculation",
+            status="completed",
+        ),
+        AnalysisActivity(
+            stage="Recommendation Generation",
+            status="completed",
+        ),
+    ]
 
     return AnalyzeResponse(
         stored_filename=stored_filename,
@@ -169,24 +159,13 @@ def analyze_resume(
             experience=resume_profile.experience,
         ),
         job_requirements=job_requirements,
-        matched_skills=(
-            skill_match.matched_skills
-        ),
-        missing_skills=(
-            missing_skill_result.missing_skills
-        ),
-        matched_experience=(
-            experience_match.matched_experience
-        ),
-        unmatched_experience=(
-            experience_match.unmatched_experience
-        ),
+        matched_skills=(skill_match.matched_skills),
+        missing_skills=(missing_skill_result.missing_skills),
+        matched_experience=(experience_match.matched_experience),
+        unmatched_experience=(experience_match.unmatched_experience),
         skill_score=score.skill_score,
-        experience_score=(
-            score.experience_score
-        ),
+        experience_score=(score.experience_score),
         overall_score=score.overall_score,
-        recommendations=(
-            recommendation_result.recommendations
-        ),
+        recommendations=(recommendation_result.recommendations),
+        activity=activity,
     )

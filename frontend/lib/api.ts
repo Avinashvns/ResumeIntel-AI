@@ -53,6 +53,11 @@ export async function uploadResume(
   return response.json();
 }
 
+export interface AnalysisActivity {
+  stage: string;
+  status: string;
+}
+
 
 export interface AnalyzeResponse {
   stored_filename: string;
@@ -81,6 +86,8 @@ export interface AnalyzeResponse {
   overall_score: number;
 
   recommendations: string[];
+  
+  activity: AnalysisActivity[];
 }
 
 

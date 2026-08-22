@@ -547,6 +547,56 @@ export default function Home() {
               />
             </div>
 
+            {/* Agent Activity */}
+
+            <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">
+                    Agent Activity
+                  </h3>
+
+                  <p className="mt-1 text-sm text-slate-400">
+                    Analysis pipeline execution stages.
+                  </p>
+                </div>
+
+                <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400">
+                  Completed
+                </span>
+              </div>
+
+              <div className="mt-5 space-y-3">
+                {analysisResult.activity.map(
+                  (activity, index) => (
+                    <div
+                      key={`${activity.stage}-${index}`}
+                      className="flex items-center gap-4 rounded-xl border border-slate-800 bg-slate-950 p-4"
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
+                        <span className="text-sm font-bold text-emerald-400">
+                          {activity.status ===
+                            "completed"
+                            ? "✓"
+                            : "•"}
+                        </span>
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-slate-200">
+                          {activity.stage}
+                        </p>
+
+                        <p className="mt-1 text-xs capitalize text-slate-500">
+                          {activity.status}
+                        </p>
+                      </div>
+                    </div>
+                  ),
+                )}
+              </div>
+            </div>
+
             {/* Recommendations */}
 
             <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-6">
